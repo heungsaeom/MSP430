@@ -1,0 +1,18 @@
+#ifndef DHT11_H_
+#define DHT11_H_
+
+typedef enum{TIMEOUT, CHECKSUM_ERROR, DHT_OK}DHT_STATUS;
+
+/*
+ * \brief Initialize the TA0 to communication with DHT sensor
+ */
+void DHTbegin(void);
+
+/*
+ * \brief Read humidity and temperature values
+ * Parameters: Humidity and temperature variables address
+ * return DHT status
+ */
+DHT_STATUS DHTread(char *_humidity, char *_temperature);
+
+#endif /* DHT11_H_ */

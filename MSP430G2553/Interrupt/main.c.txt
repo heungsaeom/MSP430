@@ -1,0 +1,26 @@
+#include <msp430g2553.h>
+long i=0;
+
+void main(void) {
+    WDTCTL = WDTPW + WDTHOLD;             // Stop watchdog timer
+
+    P1SEL &= ~0x08;                    // Select Port 1 P1.3 (push button)
+     P1DIR &= ~0x08;                    // Port 1 P1.3 (push button) as input, 0 is input
+    P1REN |= 0x08;                        // Enable Port P1.3 (push button) pull-up resistor
+
+    P1IE |= 0x08;                        // Port 1 Interrupt Enable P1.3 (push button)
+
+    P1IFG &= ~0x08;                    // Clear interrupt flag
+
+    _BIS_SR(GIE);                           // Enable interrupts
+
+    while(1) i++;                          // Execute some useful computation
+}
+                                    // Port 1 interrupt service routine
+#pragma vector=PORT1_VECTOR
+      __interrupt void Port_1(void) {
+
+    P1IFG &= ~0x08;                     // P1.3 Interrupt Flag cleared
+
+    i = 0;                             // Reset count
+}

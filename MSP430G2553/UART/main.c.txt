@@ -1,0 +1,64 @@
+﻿////////////////////////////////////////////////////////////////////
+// VIET BOI : PHAM VAN THUAN	DTVT07-K55
+// Email:	terran991992@gmail.com
+// Blog :	http://thuanbk55.blogspot.com/
+// .................................................................
+// Bai 3.(MSP430_Basic) UART
+//******************************************************************/
+#include "msp430g2553.h"
+#include "uart.h"
+/*	Khai báo loại chip đang dùng
+ * 	Thư viện này chứa các khai báo tên #define cho địa
+ * 	chỉ các thanh ghi
+ */
+int abc=134;
+float float1=2.4567856;
+
+char temp;
+void main(void)
+{
+	WDTCTL = WDTPW | WDTHOLD;	//Stop Watchdog
+
+	BCSCTL1 = CALBC1_1MHZ;		//2 thanh ghi cài đặt tần số hoạt động
+	DCOCTL = CALDCO_1MHZ;		//Ở đây là 1 Mhz
+	SMCLK_F=1000000;
+	P1DIR|=BIT0;
+	UART_Init();
+	UART_Write_Char(10);
+	UART_Write_String("Ket noi thanh cong 1");
+	UART_Write_Char(10);
+	UART_Write_String("Ket noi thanh cong 2");
+
+	SMCLK_F=16000000;
+	_delay_cycles(10000);
+	BCSCTL1 = CALBC1_16MHZ;		//2 thanh ghi cài đặt tần số hoạt động
+	DCOCTL = CALDCO_16MHZ;		//Ở đây là 1 Mhz
+	P1DIR|=BIT0;
+	_delay_cycles(100000);
+	UART_Init();
+	UART_Write_Char(10);
+	UART_Write_String("Ket noi thanh cong 3");
+	UART_Write_Char(10);
+	UART_Write_String("Ket noi thanh cong 4");
+
+	UART_Write_Char(10);  //Ký tự xuống dòng
+	UART_Write_Char('A'); //A
+	UART_Write_Char(10);
+	UART_Write_String("Chuong trinh test UART");
+	UART_Write_Char(10);
+	UART_Write_Reg("P1IN",P1IN); //0b00000010
+	UART_Write_Char(10);
+	UART_Write_Int(abc);
+	UART_Write_Char(10);
+	UART_Write_Float(float1,5);
+	UART_Write_Char(10);
+
+	//while(1)
+	//{
+		abc=UART_Read_Char();
+		UART_Write_Char(abc);
+	//}
+
+
+	__bis_SR_register(LPM0);
+}

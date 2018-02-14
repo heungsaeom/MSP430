@@ -1,0 +1,56 @@
+
+#include <msp430g2553.h>
+#include "adc.h"
+
+
+
+int adc,adc2;
+unsigned char  a,b;
+
+
+void configclk(void);
+void adc_setup();
+int adc_read();
+void delay16_ms(int time);
+void configIO(void);
+char kq (void);
+
+//uart
+
+void main( void )
+{
+  // Stop watchdog timer to prevent time out reset
+  WDTCTL = WDTPW + WDTHOLD;
+  configclk();
+  adc_setup();
+  adc_read();
+   while(1)
+   {
+     delay16_ms(100);
+     b = kq ();
+     delay16_ms(1000);
+    
+   }
+  
+  
+}
+
+void configclk(void)
+{
+        DCOCTL =0;
+        BCSCTL1 = CALBC1_16MHZ ;
+        DCOCTL = CALDCO_16MHZ ;
+        BCSCTL2 |= SELM_0;
+}
+
+
+// doc ket qua adc thu dc tu mach nhip tim va tinh toan
+
+// thiet lap thoi gian delay la ms
+void delay16_ms(int time)
+{
+  for(int i = 0; i < time; i++)
+  {
+    __delay_cycles(16000);
+  }
+}

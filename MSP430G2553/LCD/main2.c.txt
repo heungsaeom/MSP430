@@ -1,0 +1,23 @@
+#include <msp430.h>
+#include "lcd.h"
+
+void main(void)
+{
+    int tempInt = 13;
+    int pressaoInt = 17;
+    
+    long tempLong = 273;
+    long pressaoLong = 1234;
+    
+    WDTCTL = WDTPW + WDTHOLD;
+    inicializarLcd();
+    enviaString("Temp: ");
+    longToLcd(tempLong, 2);
+    //integerToLcd(tempInt);
+    enviaComando(0xC0);
+    enviaString("Pressao: ");
+    longToLcd(pressaoLong, 1);
+    //integerToLcd(pressaoInt);
+    
+    while(1){}
+}

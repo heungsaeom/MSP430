@@ -1,0 +1,144 @@
+#include <msp430.h>
+
+// IR pulse timing constants in microseconds
+
+#define HP_MIN      8500    // Header pulse minimum duration
+#define HP_MAX      9500    // Header pulse maximum duration
+#define HPL_MIN     4100    // Header pulse low minimum duration
+#define HPL_MAX     4800    // Header pulse low maximum duration
+#define RPT_MIN     1900    // Repeat pulse minimum duration
+#define RPT_MAX     2500    // Repeat pulse minimum duration
+#define BP_MIN      450     // Bit pulse minimum duration
+#define BP_MAX      650     // Bit pulse maximum duration
+#define ONE_MIN     2000    // Logical one minumum duration
+#define ONE_MAX     2500    // Logical one maxumum duration
+#define ZERO_MIN    1000    // Logical zero minumum duration
+#define ZERO_MAX    1300    // Logical zero maxumum duration
+
+#define FALSE 0
+#define TRUE (!FALSE)
+#define IR_REPEAT 0xFF00    // Special repeat code
+#define MAX_DATA_BITS 32    // NEC protocol provides for 32 bits of data
+
+#define PIN_IR      BIT2    // This must be TA0.1
+//#define PIN_LED1    BIT0    // LED1 on the Launchpad
+
+//#define BUTTON_POWER    0x00FD00FF    // This is a code for the button to toggle the LED
+
+static unsigned char hp, hr;                    //header pulse received, header received
+static unsigned char br;                        // bits received
+static unsigned char pulse=FALSE;               // pulse in progress
+static volatile unsigned char ready = FALSE;    // data ready
+static unsigned int pw=0, bw=0;                 // pulse width, bit width
+
+static volatile unsigned long data;
+
+void ir_init(void)
+{
+    __disable_interrupt();
+    BCSCTL1 = CALBC1_1MHZ;                  // Set DCO to 1MHz to measure pulses in microseconds
+    DCOCTL = CALDCO_1MHZ;
+    P1DIR &= ~PIN_IR;                       // Set IR detector pin to input
+    P1OUT |= PIN_IR;                        // Set resistor to pull-up
+    P1REN |= PIN_IR;                        // Enable resistor
+    P1SEL = PIN_IR;                         // set IR detector pin to peripheral function
+    TA0CTL = TASSEL_2 | ID_0 | MC_2;         // SMCLK, Continuous mode, Input divider /1
+    TA0CCTL1 = CM_3 |  CCIS_0 | CAP | CCIE;  // Capture on both edges, Capture Input Select CCI0A, Capture mode, Capture interrupt enable
+    __enable_interrupt();
+}
+
+void main(void)
+{
+    WDTCTL = WDTPW | WDTHOLD;       // Stop the Watchdog timer
+//    P1DIR = PIN_LED1;               // LED1 to output
+    ir_init();                      // Initialize IR detection
+
+    // Loop forever
+    do{
+       /* _low_power_mode_0();        // Wait in LPM0 until the IR remote code is received
+        // Set a breakpoint on the next line and add a watch for the data variable to see the IR code received
+        if (data == BUTTON_POWER)   // If remote power button is pressed
+            P1OUT ^= PIN_LED1;      // Toggle LED1
+    */}while(1);
+}
+
+//---------------------------TIMER0_A0_ISR--------------------------
+#pragma vector=TIMER0_A0_VECTOR
+__interrupt void timer_A_interrupt(void)
+{
+
+    unsigned int i = TA0IV;                          // Read TAIV to clear CCIFG
+
+    // Is this the beginning or the end of the pulse?
+    if (!pulse)
+    // start of the pulse
+    {
+        bw=TA0CCR1;
+        // reset Timer
+        TA0CTL |= TACLR;
+        pulse=TRUE;
+        // Has the header pulse just been received?
+        if (hp)
+        {
+            // Is the header duration in range?
+            if (bw>HPL_MIN && bw<HPL_MAX)
+            {
+                hr=TRUE;
+                br=0;
+                data=0;
+                ready=FALSE;
+            }
+            // is it a repeat code?
+            else if (bw>RPT_MIN && bw<RPT_MAX)
+            {
+                data=IR_REPEAT;
+                hr=FALSE;
+                ready=TRUE;
+            }
+        }
+        // Was there a bit pulse before, and also has the header been received?
+        if(hr && pw>BP_MIN && pw<BP_MAX)
+        {
+            if (bw>ONE_MIN && bw<ONE_MAX)
+            {
+                data<<=1;
+                data++;
+                br++;
+            }
+            else if (bw>ZERO_MIN && bw<ZERO_MAX)
+            {
+                data<<=1;
+                br++;
+            }
+            if (br==MAX_DATA_BITS)
+            {
+                hr=FALSE;
+                ready=TRUE;
+            }
+        }
+        hp=FALSE;
+    }
+    else
+    // end of the pulse
+    {
+        pw=TA0CCR1;
+        pulse=FALSE;
+        // Is this a header pulse?
+        if (pw>HP_MIN && pw<HP_MAX)
+        {
+            // set Header Pulse Received flag
+            hp=TRUE;
+            // Reset timer
+            TA0CTL |= TACLR;
+        }
+        else
+        {
+            hp=FALSE;
+        }
+    }
+    if (ready)
+    {
+        ready = FALSE;
+       // _low_power_mode_off_on_exit();  // Return from LPM
+    }
+}
